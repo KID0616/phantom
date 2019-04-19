@@ -239,7 +239,7 @@ int main(int argc, char *argv)
   }  
   pub.publish(msg);		//msgは力、位置、トルク、関節角度をpublishする
    
-  prevTimeLoop = t;		//prevTimeLoopに現時刻を入れておく 
+  prevTimeLoop = t;		//prevTimeLoopに現時刻を入れる
   ros::spinOnce();
   loop_rate.sleep();
 
