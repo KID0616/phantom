@@ -45,7 +45,7 @@ add_executable(omni_angle ${SRC_FILES})
 ## the ``find_package(Qt4 ...)`` line above, or by the
 ## ``set(QT_LIBRARIES Qt5::Widgets)``, and with whatever libraries
 ## catkin has included.
-target_link_libraries(pa10 ${QT_LIBRARIES} ${catkin_LIBRARIES})
+target_link_libraries(omni_angle ${QT_LIBRARIES} ${catkin_LIBRARIES})
 ## END_TUTORIAL
 
 ## Install

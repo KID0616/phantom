@@ -375,25 +375,25 @@ message_runtime_DIR:PATH=/opt/ros/kinetic/share/message_runtime/cmake
 nav_msgs_DIR:PATH=/opt/ros/kinetic/share/nav_msgs/cmake
 
 //Value Computed by CMake
-omni_angle_BINARY_DIR:STATIC=/home/kid/catkin_ws/build/phantom_omni/omni_angle
+omni_angle_BINARY_DIR:STATIC=/home/kid/catkin_ws/build/phantom_omni_/omni_angle
 
 //Value Computed by CMake
-omni_angle_SOURCE_DIR:STATIC=/home/kid/catkin_ws/src/phantom_omni/omni_angle
+omni_angle_SOURCE_DIR:STATIC=/home/kid/catkin_ws/src/phantom_omni_/omni_angle
 
 //Value Computed by CMake
-omni_description_BINARY_DIR:STATIC=/home/kid/catkin_ws/build/phantom_omni/omni_description
+omni_description_BINARY_DIR:STATIC=/home/kid/catkin_ws/build/phantom_omni_/omni_description
 
 //Value Computed by CMake
-omni_description_SOURCE_DIR:STATIC=/home/kid/catkin_ws/src/phantom_omni/omni_description
+omni_description_SOURCE_DIR:STATIC=/home/kid/catkin_ws/src/phantom_omni_/omni_description
 
 //Value Computed by CMake
-phantom_omni_BINARY_DIR:STATIC=/home/kid/catkin_ws/build/phantom_omni/phantom_omni_
+phantom_omni_BINARY_DIR:STATIC=/home/kid/catkin_ws/build/phantom_omni_/phantom_omni_
 
 //The directory containing a CMake configuration file for phantom_omni.
 phantom_omni_DIR:PATH=/home/kid/catkin_ws/devel/share/phantom_omni/cmake
 
 //Value Computed by CMake
-phantom_omni_SOURCE_DIR:STATIC=/home/kid/catkin_ws/src/phantom_omni/phantom_omni_
+phantom_omni_SOURCE_DIR:STATIC=/home/kid/catkin_ws/src/phantom_omni_/phantom_omni_
 
 //The directory containing a CMake configuration file for pluginlib.
 pluginlib_DIR:PATH=/opt/ros/kinetic/share/pluginlib/cmake

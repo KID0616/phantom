@@ -1,0 +1,8 @@
+prefix=/home/kid/catkin_ws/install
+
+Name: omni_angle
+Description: Description of omni_angle
+Version: 0.0.0
+Cflags: 
+Libs: -L/home/kid/catkin_ws/install/lib 
+Requires: 

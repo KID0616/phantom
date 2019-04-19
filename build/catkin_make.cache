@@ -1,2 +1,2 @@
-phantom_omni/omni_angle:phantom_omni/omni_description:phantom_omni/phantom_omni_
+phantom_omni_/omni_angle:phantom_omni_/omni_description:phantom_omni_/phantom_omni_
 -DCATKIN_DEVEL_PREFIX=/home/kid/catkin_ws/devel -DCMAKE_INSTALL_PREFIX=/home/kid/catkin_ws/install -G Unix Makefiles
