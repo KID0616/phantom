@@ -78,6 +78,8 @@ geometry_msgs::Vector3 inverse_kin(geometry_msgs::Vector3 pos)
 {
 	//Inverse kinematics[!]
 	geometry_msgs::Vector3 angles;
+	angles.x = atan2(pos.y , pos.y);
+
 	return angles;
 }
 
@@ -94,7 +96,7 @@ geometry_msgs::Vector3 forward_kin(geometry_msgs::Vector3 angles)
 
 //実機のセンサーから関節角度をコールバックする関数
 //時間と現在の関節角度から、現在の関節速度・加速度を計算
-void angle_callback(const sensor_msgs::JointState::ConstPtr msg)		//msg:取得した関節
+void angle_callback(const sensor_msgs::JointState::ConstPtr msg)		//msg:取得した関節角度
 {
 	//Callback joint_state -- from actual manipulator 
 	ros::Time t = ros::Time::now();   //現在の時間を取得
