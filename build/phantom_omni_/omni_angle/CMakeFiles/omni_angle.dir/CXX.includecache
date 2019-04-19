@@ -8,6 +8,30 @@
 
 /home/kid/catkin_ws/build/phantom_omni_/omni_angle/omni_angle_automoc.cpp
 
+/home/kid/catkin_ws/devel/include/phantom_omni/OmniFeedback.h
+string
+-
+vector
+-
+map
+-
+ros/types.h
+-
+ros/serialization.h
+-
+ros/builtin_message_traits.h
+-
+ros/message_operations.h
+-
+geometry_msgs/Vector3.h
+-
+geometry_msgs/Vector3.h
+-
+geometry_msgs/Vector3.h
+-
+geometry_msgs/Vector3.h
+-
+
 /home/kid/catkin_ws/src/phantom_omni_/omni_angle/src/main.cpp
 ros/ros.h
 -

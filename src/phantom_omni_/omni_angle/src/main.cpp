@@ -85,8 +85,10 @@ geometry_msgs::Vector3 inverse_kin(geometry_msgs::Vector3 pos)
 geometry_msgs::Vector3 forward_kin(geometry_msgs::Vector3 angles)
 {
 	//Forward kinematics[!]
-	geometry_msgs::Vector3 pos
-	
+	geometry_msgs::Vector3 pos;
+	pos.x = 0;
+	pos.y = 0;
+	pos.z = 0;
 	return pos;
 }
 
@@ -102,7 +104,7 @@ void angle_callback(const sensor_msgs::JointState::ConstPtr msg)		//msg:取得�
 	curAn.z = msg->position[2]-(M_PI/2); //!!!
 
 	//時間をdouble型に変換する
-	double diff = t-prevTime.toSec();   //現在の時間一つ前の時間 = diff
+	double diff = t.toSec() - prevTime.toSec();   //現在の時間一つ前の時間 = diff
 
 	//現在の関節速度を計算(関節角度の差を時間で割ることによって微分)
 	curAnVel.x = (curAn.x - prevAn.x) / diff;
@@ -133,7 +135,7 @@ phantom_omni::OmniFeedback get_torque(ros::Time time_now, ros::Time time_last)
 	phantom_omni::OmniFeedback msg;   //msg OmniFeedback:すべてVector3型　force position torqe thetas
 	msg.thetas = curDesAn;		//
 	msg.thetas.z = (msg.thetas.z+M_PI/2); 
-	retrun msg;
+	return msg;
 }
 
 //ここまでサブ関数
@@ -143,7 +145,7 @@ phantom_omni::OmniFeedback get_torque(ros::Time time_now, ros::Time time_last)
 
 
 //main関数
-int main(int argc, char *argv)
+int main(int argc, char **argv)
 {
 	ros::init( argc, argv, "omni_haptic_node");		//初期化　ノード名は"omni_hptic_node"
 	
