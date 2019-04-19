@@ -45,7 +45,7 @@ double Kdz = 300;
 
 //cur = Current, An=Angle, Pos = Position, Vel = Velocity, Acc = Acceleration, prev = Previous, Des = Destination
 //Vector3の各要素の変数の型はfloat型
-geometry_msgs::Vector3 curAn, curPos, initialPos, finalPos, initialAngle, finalAn, curAnVel, curAnAcc, prevAn, prevAnVel;
+geometry_msgs::Vector3 curAn, curPos, initialPos, finalPos, initialAn, finalAn, curAnVel, curAnAcc, prevAn, prevAnVel;
 
 geometry_msgs::Vector3 curDesPos, prevDesPos, curDesAn, curDesAnVel, curDesAnAcc, prevDesAn, prevDesAnVel, prevDesAnAcc;
 
@@ -60,7 +60,7 @@ ros::Time prevTime;
 
 //ここからサブ関数
 //現在の関節角度を計算
-float angleValue(float x0, float xf, float t0, float tf, float t)  //(初期関節角度、目標関節角度、開始時刻、総移動時間、経過時刻)
+float angleValue(float x0, float xf, float t0, float tf, float t)  //(初期関節角度、目標関節角度、開始時刻、終了時刻、現在時刻)
 {
   t = t-t0;		//経過時間
   tf = tf-t0;		//総移動時間
@@ -153,7 +153,7 @@ int main(int argc, char **argv)
 	ros::NodeHandle n;
 
 	//"omni_force_feedbackをpublishする"
-	ros::Publisher pub_ = n.advertise<std_msgs:://何かを入れる>("omni1_force_feedback", 1000); 
+	ros::Publisher pub = n.advertise<phantom_omni::OmniFeedback>("omni1_force_feedback", 1000); 
 
 	//t-1の時間を取得
 	prevTime = ros::Time::now();
@@ -219,9 +219,9 @@ int main(int argc, char **argv)
 			prevDesAnAcc = curDesAnAcc;
 
 			//現在の移動目標位置・関節角度・角速度・角加速度を計算
-			curDesAn.x = angleValue(initialAn.x,finalAn.x, 0, (t_f-t_0), (t-t_0));
-			curDesAn.y = angleValue(initialAn.y,finalAn.y, 0, (t_f-t_0), (t-t_0));
-			curDesAn.z = angleValue(initialAn.z,finalAn.z, 0, (t_f-t_0), (t-t_0));
+			curDesAn.x = angleValue(initialAn.x,finalAn.x, 0, t_f.toSec(), t.toSec());
+			curDesAn.y = angleValue(initialAn.y,finalAn.y, 0, t_f.toSec(), t.toSec());
+			curDesAn.z = angleValue(initialAn.z,finalAn.z, 0, t_f.toSec(), t.toSec());
 
 
 			msg = get_torque(t,prevTimeLoop);
