@@ -237,12 +237,13 @@ int main(int argc, char *argv)
 		cout<<"Hello World"<<endl;
 	break;
   }  
-  pub_.publish(msg);		//msgは力、位置、トルク、関節角度をpublishする
+  pub.publish(msg);		//msgは力、位置、トルク、関節角度をpublishする
    
   prevTimeLoop = t;		//prevTimeLoopに現時刻を入れておく 
   ros::spinOnce();
   loop_rate.sleep();
 
+//強制停止が入ったとき入力トルクを0にする。
   if(interrupted)
   {
     msg.torque.x = 0;
