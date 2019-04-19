@@ -60,8 +60,11 @@ ros::Time prevTime;
 
 //ここからサブ関数
 //現在の関節角度を計算
-float angleValue(float x0, float xf, float t0, float tf, float t)  //(初期関節角度、目標関節角度、開始時刻、終了時刻、現在時刻)
+float angleValue(float x0, float xf, float t0, float tf, float t)  //(初期関節角度、目標関節角度、開始時刻、総移動時間、経過時間)
 {
+  cout<< "t0 = "<< t0 <<endl;
+  cout<< "t  = "<< t <<endl;
+  cout<< "tf = "<< tf <<endl;
   t = t-t0;		//経過時間
   tf = tf-t0;		//総移動時間
   //経過時間が総移動時間より少ない時に現在の関節角度を計算
@@ -69,6 +72,7 @@ float angleValue(float x0, float xf, float t0, float tf, float t)  //(初期関�
     return t*(xf-x0)/(tf-t0) + x0;
   } 
   else {			//総移動時間を過ぎた時は目標位置を返す
+	cout<< "it is end" <<endl;
     return xf;
   }
 }
@@ -78,8 +82,14 @@ geometry_msgs::Vector3 inverse_kin(geometry_msgs::Vector3 pos)
 {
 	//Inverse kinematics[!]
 	geometry_msgs::Vector3 angles;
-	angles.x = atan2(pos.y , pos.y);
+	float c_3;
+	float s_3;
+	c_3 = (std::pow(pos.x,2.0) + std::pow(pos.y,2.0) + std::pow(pos.z,2.0) -std::pow(a2,2.0) - std::pow(a3,2.0))/(2 * a2 * a3);
+	s_3 = sqrt(1 - std::pow(c_3,2.0));
 
+	angles.x = atan2(pos.y , pos.x);
+	angles.z = atan2(s_3,c_3);
+	angles.y = atan2( pos.z , sqrt(std::pow(pos.x,2.0) + std::pow(pos.y,2.0))) + atan2(a3 + s_3 , a2 + a3 * c_3);
 	return angles;
 }
 
@@ -163,7 +173,7 @@ int main(int argc, char **argv)
 	//omni1_joint_statesから関節角度の情報を取得する。さらにangle_callbackを実行
 	ros::Subscriber haptic_sub = n.subscribe("omni1_joint_states", 100, angle_callback);
 
-	ros::Rate loop_rate(1);		//ノードの動作周波数設定
+	ros::Rate loop_rate(20);		//ノードの動作周波数設定
 	
 
 	phantom_omni::OmniFeedback msg;		//msg OmniFeedback:すべてVector3型　force position torqe thetas
@@ -174,6 +184,8 @@ int main(int argc, char **argv)
 
 	bool setup = false;
 
+	ros::Time t = ros::Time::now();
+
 	ros::Time prevTimeLoop =ros::Time::now();
 
 	//列挙型:複数の定数をまとめる ここでは状態のステータスを表す
@@ -182,14 +194,13 @@ int main(int argc, char **argv)
 	while (ros::ok()&& !interrupted)		//ノード実行中でなおかつinterrupted = falseの時ループを実行する
 	{
 		signal(SIGINT, mySigintHandler);  //SIGINT:外部の割り込みを表す。この時interrupted = trueとする
-		//現時刻を取得
-		ros::Time t = ros::Time::now();
+		
 
 		//curStateの持つ状態ステータスに応じた処理を行う
 		switch (curState){
 		case STANDBY:		//スタンバイ状態のとき
 		
-			t_0 = ros::Time::now()+ ros::Duration(30.0);
+			t_0 = ros::Time::now()+ ros::Duration(3.0);
 			t_f = t_0 + ros::Duration(5.0);
 			curState = JOINTMOVE;		//状態をSTANDBYからJOINTMOVEに変え,breakする。
 		break;
@@ -207,25 +218,31 @@ int main(int argc, char **argv)
 
 			setup = true;		//セットアップ完了
 
-			t_f = t_0 + ros::Duration(3.0);
+			t_f = t_0 + ros::Duration(5.0);
 			//目標角度のセット
 			finalAn.x = M_PI/6;		
 			finalAn.y = M_PI/6;
 			finalAn.z = M_PI/6 - M_PI/2;
 		}
-		if (t > t_0 && t < t_f){		//現時刻が設定した時間内のとき
+		//現時刻を取得
+		t = ros::Time::now();
+
+		if (t > t_0 && t < t_f + ros::Duration(0.05)){		//現時刻が設定した時間内のとき
 			//前回の移動目票位置・関節角度・角速度・角加速度=今回の移動目票位置・関節角度・角速度・角加速度
 			prevDesAn = curDesAn;		
 			prevDesPos = curDesPos;
 			prevDesAnVel = curDesAnVel;
 			prevDesAnAcc = curDesAnAcc;
+			
 
 			//現在の移動目標位置・関節角度・角速度・角加速度を計算
-			curDesAn.x = angleValue(initialAn.x,finalAn.x, 0, t_f.toSec(), t.toSec());
-			curDesAn.y = angleValue(initialAn.y,finalAn.y, 0, t_f.toSec(), t.toSec());
-			curDesAn.z = angleValue(initialAn.z,finalAn.z, 0, t_f.toSec(), t.toSec());
-
-
+			curDesAn.x = angleValue(initialAn.x,finalAn.x, 0 , (t_f-t_0).toSec(), (t-t_0).toSec());
+			curDesAn.y = angleValue(initialAn.y,finalAn.y, 0 , (t_f-t_0).toSec(), (t-t_0).toSec());
+			curDesAn.z = angleValue(initialAn.z,finalAn.z, 0 , (t_f-t_0).toSec(), (t-t_0).toSec());
+			cout<< "a1 = " << curDesAn.x *180 / M_PI <<endl;
+			cout<< "a2 = " << curDesAn.y *180 / M_PI <<endl;
+			cout<< "a3 = " << curDesAn.z *180 / M_PI <<endl;
+			
 			msg = get_torque(t,prevTimeLoop);
 
 		   }
@@ -238,7 +255,7 @@ int main(int argc, char **argv)
 
 	default:
 	
-		cout<<"Hello World"<<endl;
+		//cout<<"Hello World"<<endl;
 	break;
   }  
   pub.publish(msg);		//msgは力、位置、トルク、関節角度をpublishする
