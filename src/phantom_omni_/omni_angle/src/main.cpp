@@ -73,7 +73,7 @@ float angleValue(float x0, float xf, float t0, float tf, float t)  //(初期関�
   }
 }
 
-//逆運動学によって各関節角度をけいさん
+//逆運動学によって各関節角度を計算
 geometry_msgs::Vector3 inverse_kin(geometry_msgs::Vector3 pos)
 {
 	//Inverse kinematics[!]
