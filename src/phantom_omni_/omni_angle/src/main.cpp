@@ -5,6 +5,8 @@
 #include <sensor_msgs/JointState.h>
 #include <geometry_msgs/Vector3.h>
 
+#define RATE 30.0
+
 using namespace std;
 
 //bool型　trueがfalseをここに格納
@@ -173,7 +175,7 @@ int main(int argc, char **argv)
 	//omni1_joint_statesから関節角度の情報を取得する。さらにangle_callbackを実行
 	ros::Subscriber haptic_sub = n.subscribe("omni1_joint_states", 100, angle_callback);
 
-	ros::Rate loop_rate(20);		//ノードの動作周波数設定
+	ros::Rate loop_rate(RATE);		//ノードの動作周波数設定
 	
 
 	phantom_omni::OmniFeedback msg;		//msg OmniFeedback:すべてVector3型　force position torqe thetas
@@ -190,19 +192,20 @@ int main(int argc, char **argv)
 
 	//列挙型:複数の定数をまとめる ここでは状態のステータスを表す
 	enum State{STANDBY, JOINTMOVE, POSMOVE, CIRCLE, LINE, FINISH};
-	State curState = STANDBY;		//状態ステータスをスタンバイに
+	State curState = JOINTMOVE;		//状態ステータスをスタンバイに
 	while (ros::ok()&& !interrupted)		//ノード実行中でなおかつinterrupted = falseの時ループを実行する
 	{
 		signal(SIGINT, mySigintHandler);  //SIGINT:外部の割り込みを表す。この時interrupted = trueとする
 		
+		ros::Time t = ros::Time::now();
 
 		//curStateの持つ状態ステータスに応じた処理を行う
 		switch (curState){
 		case STANDBY:		//スタンバイ状態のとき
 		
-			t_0 = ros::Time::now()+ ros::Duration(3.0);
+			t_0 = ros::Time::now()+ ros::Duration(30.0);
 			t_f = t_0 + ros::Duration(5.0);
-			curState = JOINTMOVE;		//状態をSTANDBYからJOINTMOVEに変え,breakする。
+			curState = POSMOVE;		//状態をSTANDBYからJOINTMOVEに変え,breakする。
 		break;
 
 		//JOINTMOVEの時の処理
@@ -218,16 +221,14 @@ int main(int argc, char **argv)
 
 			setup = true;		//セットアップ完了
 
-			t_f = t_0 + ros::Duration(5.0);
+			t_f = t_0 + ros::Duration(3.0);
 			//目標角度のセット
 			finalAn.x = M_PI/6;		
 			finalAn.y = M_PI/6;
 			finalAn.z = M_PI/6 - M_PI/2;
 		}
-		//現時刻を取得
-		t = ros::Time::now();
 
-		if (t > t_0 && t < t_f + ros::Duration(0.05)){		//現時刻が設定した時間内のとき
+		if (t > t_0 && t < t_f ){		//現時刻が設定した時間内のとき
 			//前回の移動目票位置・関節角度・角速度・角加速度=今回の移動目票位置・関節角度・角速度・角加速度
 			prevDesAn = curDesAn;		
 			prevDesPos = curDesPos;
