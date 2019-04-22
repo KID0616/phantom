@@ -4,8 +4,10 @@
 #include <phantom_omni/OmniFeedback.h>
 #include <sensor_msgs/JointState.h>
 #include <geometry_msgs/Vector3.h>
+#include <fstream>
+#include <iostream>
 
-#define RATE 30.0
+#define RATE 100.0
 
 using namespace std;
 
@@ -100,9 +102,9 @@ geometry_msgs::Vector3 forward_kin(geometry_msgs::Vector3 angles)
 {
 	//Forward kinematics[!]
 	geometry_msgs::Vector3 pos;
-	pos.x = 0;
-	pos.y = 0;
-	pos.z = 0;
+	pos.x = cos(angles.x) *(a3 * cos(angles.y + angles.z) + a2 * cos(angles.y));
+	pos.y = sin(angles.x) *(a3 * cos(angles.y + angles.z) + a2 * cos(angles.y));
+	pos.z = a3 * sin(angles.y + angles.z) + a2 * sin(angles.y);
 	return pos;
 }
 
@@ -169,6 +171,19 @@ int main(int argc, char **argv)
 	//"omni_force_feedbackをpublishする"
 	ros::Publisher pub = n.advertise<phantom_omni::OmniFeedback>("omni1_force_feedback", 1000); 
 
+	ofstream fout("test1.csv");
+	if(!fout){
+		cout << "ファイルをオープンできませんでした。"<< endl;
+		return 1;
+	}
+
+	else
+	{
+		cout << "ファイルをオープンしました。" << endl;
+	}
+
+	fout<< "time"<< ","<<"a1" << ","<< "a2" << "," << "a3"  <<endl;
+	
 	//t-1の時間を取得
 	prevTime = ros::Time::now();
 
@@ -240,11 +255,17 @@ int main(int argc, char **argv)
 			curDesAn.x = angleValue(initialAn.x,finalAn.x, 0 , (t_f-t_0).toSec(), (t-t_0).toSec());
 			curDesAn.y = angleValue(initialAn.y,finalAn.y, 0 , (t_f-t_0).toSec(), (t-t_0).toSec());
 			curDesAn.z = angleValue(initialAn.z,finalAn.z, 0 , (t_f-t_0).toSec(), (t-t_0).toSec());
-			cout<< "a1 = " << curDesAn.x *180 / M_PI <<endl;
-			cout<< "a2 = " << curDesAn.y *180 / M_PI <<endl;
-			cout<< "a3 = " << curDesAn.z *180 / M_PI <<endl;
+
+
+			//fout<< curDesAn.y *180 / M_PI <<endl;
+			//fout<< curDesAn.z *180 / M_PI <<endl;
 			
 			msg = get_torque(t,prevTimeLoop);
+
+			//時間をファイルへ出力
+			fout<< (t-t_0).toSec() << ",";			
+			//角度をファイルへ出力
+			fout<< curAn.x *180 / M_PI << ","<<curAn.y *180 / M_PI  << ","<<curAn.z *180 / M_PI <<endl;
 
 		   }
 		   else if(t > t_f){		//もし時間が過ぎていた時
@@ -273,8 +294,11 @@ int main(int argc, char **argv)
     msg.torque.z = 0;
     pub.publish(msg);
     ros::shutdown();
+		fout.close();
+		cout << "ファイルをクローズしました" << endl;
   }
 
 }
-  return 0;
+
+return 0;
 }
