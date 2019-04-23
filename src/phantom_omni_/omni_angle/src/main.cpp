@@ -137,8 +137,8 @@ void angle_callback(const sensor_msgs::JointState::ConstPtr msg)		//msg:取得�
 	prevAnVel = curAnVel;	//角速度
 	prevTime = t;	//時間
 
-	//現在の位置座標を逆運動学関数inverse_kin()によって計算
-	curPos = inverse_kin(curAn);
+	//現在の位置座標を運動学関数inverse_kin()によって計算
+	curPos = forward_kin(curAn);
 }
 
 
@@ -182,7 +182,7 @@ int main(int argc, char **argv)
 		cout << "ファイルをオープンしました。" << endl;
 	}
 
-	fout<< "time"<< ","<<"a1" << ","<< "a2" << "," << "a3"  <<endl;
+	fout<< "time"<< ","<<"a1" << ","<< "a2" << "," << "a3"  <<","<<"px" << ","<< "py" << "," << "pz"  <<endl;
 	
 	//t-1の時間を取得
 	prevTime = ros::Time::now();
@@ -245,6 +245,13 @@ int main(int argc, char **argv)
 
 		if (t > t_0 && t < t_f ){		//現時刻が設定した時間内のとき
 			//前回の移動目票位置・関節角度・角速度・角加速度=今回の移動目票位置・関節角度・角速度・角加速度
+
+			//時間をファイルへ出力
+			fout<< (t-t_0).toSec() << ",";			
+			//角度をファイルへ出力
+			fout<< curAn.x *180 / M_PI << ","<<curAn.y *180 / M_PI  << ","<<curAn.z *180 / M_PI <<"," ;
+			fout<< curPos.x << ","<<curPos.y << ","<< curPos.z <<endl;
+
 			prevDesAn = curDesAn;		
 			prevDesPos = curDesPos;
 			prevDesAnVel = curDesAnVel;
@@ -262,10 +269,6 @@ int main(int argc, char **argv)
 			
 			msg = get_torque(t,prevTimeLoop);
 
-			//時間をファイルへ出力
-			fout<< (t-t_0).toSec() << ",";			
-			//角度をファイルへ出力
-			fout<< curAn.x *180 / M_PI << ","<<curAn.y *180 / M_PI  << ","<<curAn.z *180 / M_PI <<endl;
 
 		   }
 		   else if(t > t_f){		//もし時間が過ぎていた時
