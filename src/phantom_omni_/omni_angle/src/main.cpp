@@ -9,6 +9,12 @@
 
 #define RATE 100.0
 
+#define THETA_D_0 0.0
+#define THETA_DD_0 0.0
+#define THETA_D_F 0.0
+#define THETA_DD_F 0.0
+
+
 using namespace std;
 
 //bool型　trueがfalseをここに格納
@@ -56,7 +62,16 @@ geometry_msgs::Vector3 curDesPos, prevDesPos, curDesAn, curDesAnVel, curDesAnAcc
 //前の時間を保存するための変数
 ros::Time prevTime;
 
+//5次補完の係数を決定
+double a_0;
+double a_1 = THETA_D_0;
+double a_2 = THETA_DD_0 / 2;
+double a_3;
+double a_4;
+double a_5;
+
 //ここまでグローバル変数
+
 
 
 
@@ -66,14 +81,21 @@ ros::Time prevTime;
 //現在の関節角度を計算
 float angleValue(float x0, float xf, float t0, float tf, float t)  //(初期関節角度、目標関節角度、開始時刻、総移動時間、経過時間)
 {
-  cout<< "t0 = "<< t0 <<endl;
+  /*cout<< "t0 = "<< t0 <<endl;
   cout<< "t  = "<< t <<endl;
-  cout<< "tf = "<< tf <<endl;
+  cout<< "tf = "<< tf <<endl;  */
   t = t-t0;		//経過時間
   tf = tf-t0;		//総移動時間
+  
+	a_0 = x0;
+	a_3 = (20 * xf - 20 * x0 - (8 * THETA_D_F + 12 * THETA_D_0) * tf - (3 * THETA_DD_0 - THETA_DD_F)* pow(tf,2))/(2 * pow(tf,3));
+	a_4 = (30 * x0 - 30 * xf + (14 * THETA_D_F + 16 * THETA_D_0) * tf + (3 * THETA_DD_0 - 2 * THETA_DD_F)* pow(tf,2))/(2 * pow(tf,4));
+	a_5 = (12 * xf - 12 * x0 - (6 * THETA_D_F + 6 * THETA_D_0) * tf + ( THETA_DD_F - THETA_DD_0)* pow(tf,2))/(2 * pow(tf,5));
+
   //経過時間が総移動時間より少ない時に現在の関節角度を計算
-  if (t <= tf){
-    return t*(xf-x0)/(tf-t0) + x0;
+  if (t < tf){
+    //return t*(xf-x0)/(tf-t0) + x0;
+		return a_0 + a_1 * pow(t,1) + a_2 * pow(t,2) + a_3 * pow(t,3) + a_4 * pow(t,4) + a_5 * pow(t,5); 
   } 
   else {			//総移動時間を過ぎた時は目標位置を返す
 	cout<< "it is end" <<endl;
@@ -131,6 +153,7 @@ void angle_callback(const sensor_msgs::JointState::ConstPtr msg)		//msg:取得�
 	curAnAcc.x = (curAnVel.x - prevAnVel.x) / diff;
 	curAnAcc.y = (curAnVel.y - prevAnVel.y) / diff;
 	curAnAcc.z = (curAnVel.z - prevAnVel.z) / diff;
+ 
 
 	//現在のパラメータを過去のパラメータに書き換え
 	prevAn = curAn;  //角度
@@ -182,7 +205,7 @@ int main(int argc, char **argv)
 		cout << "ファイルをオープンしました。" << endl;
 	}
 
-	fout<< "time"<< ","<<"a1" << ","<< "a2" << "," << "a3"  <<","<<"px" << ","<< "py" << "," << "pz"  <<endl;
+	fout<< "time"<< ","<<"a1" << ","<< "a2" << "," << "a3"  <<","<<"px" << ","<< "py" << "," << "pz" << ","<<endl;
 	
 	//t-1の時間を取得
 	prevTime = ros::Time::now();
@@ -250,7 +273,8 @@ int main(int argc, char **argv)
 			fout<< (t-t_0).toSec() << ",";			
 			//角度をファイルへ出力
 			fout<< curAn.x *180 / M_PI << ","<<curAn.y *180 / M_PI  << ","<<curAn.z *180 / M_PI <<"," ;
-			fout<< curPos.x << ","<<curPos.y << ","<< curPos.z <<endl;
+			fout<< curPos.x << ","<<curPos.y << ","<< curPos.z << "," << endl;
+
 
 			prevDesAn = curDesAn;		
 			prevDesPos = curDesPos;
