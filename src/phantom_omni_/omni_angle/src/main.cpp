@@ -114,8 +114,8 @@ geometry_msgs::Vector3 inverse_kin(geometry_msgs::Vector3 pos)
 	s_3 = sqrt(1 - std::pow(c_3,2.0));
 
 	angles.x = atan2(pos.y , pos.x);
-	angles.z = atan2(s_3,c_3);
-	angles.y = atan2( pos.z , sqrt(std::pow(pos.x,2.0) + std::pow(pos.y,2.0))) + atan2(a3 + s_3 , a2 + a3 * c_3);
+	angles.z = -atan2(s_3,c_3);
+	angles.y = atan2( pos.z , sqrt(std::pow(pos.x,2.0) + std::pow(pos.y,2.0))) + atan2(a3 * s_3 , a2 + a3 * c_3);
 	return angles;
 }
 
@@ -230,7 +230,7 @@ int main(int argc, char **argv)
 
 	//列挙型:複数の定数をまとめる ここでは状態のステータスを表す
 	enum State{STANDBY, JOINTMOVE, POSMOVE, CIRCLE, LINE, FINISH};
-	State curState = JOINTMOVE;		//状態ステータスをスタンバイに
+	State curState = LINE;		//状態ステータスをスタンバイに
 	while (ros::ok()&& !interrupted)		//ノード実行中でなおかつinterrupted = falseの時ループを実行する
 	{
 		signal(SIGINT, mySigintHandler);  //SIGINT:外部の割り込みを表す。この時interrupted = trueとする
@@ -301,6 +301,72 @@ int main(int argc, char **argv)
 			ROS_INFO("Target reached");		//ログの出力
 		   }
 		break;		//ループの終了
+
+		case LINE:
+
+		if(!setup){				//setup=falseのとき
+			ROS_INFO("Starting Motion - Line Mode");		//ログの出力
+			//初期位置にアームをセットする
+			initialAn.x = 0;
+			initialAn.y = 0;
+			initialAn.z = -M_PI/2;
+
+			curPos = forward_kin(initialAn);
+			initialPos = curPos;
+
+			setup = true;		//セットアップ完了
+
+			t_f = t_0 + ros::Duration(3.0);
+			//目標角度のセット
+			finalAn.x = M_PI/6;		
+			finalAn.y = M_PI/6;
+			finalAn.z = M_PI/6 - M_PI/2;
+
+			finalPos = forward_kin(finalAn);
+
+			
+		}
+
+		if (t > t_0 && t < t_f ){		//現時刻が設定した時間内のとき
+			//前回の移動目票位置・関節角度・角速度・角加速度=今回の移動目票位置・関節角度・角速度・角加速度
+
+			//時間をファイルへ出力
+			fout<< (t-t_0).toSec() << ",";			
+			//角度をファイルへ出力
+			fout<< curAn.x *180 / M_PI << ","<<curAn.y *180 / M_PI  << ","<<curAn.z *180 / M_PI <<"," ;
+			fout<< curPos.x << ","<<curPos.y << ","<< curPos.z << "," << endl;
+
+
+			prevDesAn = curDesAn;		
+			prevDesPos = curDesPos;
+			prevDesAnVel = curDesAnVel;
+			prevDesAnAcc = curDesAnAcc;
+			
+			//次に移動する座標を5次補間で計算　例外処理を加える必要あり：分母がゼロになる時
+			curDesPos.x = angleValue(initialPos.x,finalPos.x, 0 , (t_f-t_0).toSec(), (t-t_0).toSec());			
+			curDesPos.y = ((finalPos.y-initialPos.y)/(finalPos.x-initialPos.x)) * (curDesPos.x - initialPos.x ) + initialPos.y;
+			curDesPos.z = ((finalPos.z-initialPos.z)/(finalPos.x-initialPos.x)) * (curDesPos.x - initialPos.x ) + initialPos.z;
+
+			curDesAn = inverse_kin(curDesPos);
+			
+
+			//fout<< curDesAn.y *180 / M_PI <<endl;
+			//fout<< curDesAn.z *180 / M_PI <<endl;
+			
+			msg = get_torque(t,prevTimeLoop);
+
+
+		   }
+		   else if(t > t_f){		//もし時間が過ぎていた時
+			curState = FINISH;		//状態ステータスをFINISHに変更
+			setup = false;		//setupをfalseに変更=次回実行時は初期位置に戻る
+			ROS_INFO("Target reached");		//ログの出力
+		   }
+		break;		//ループの終了
+
+
+
+		break;
 
 	default:
 	
