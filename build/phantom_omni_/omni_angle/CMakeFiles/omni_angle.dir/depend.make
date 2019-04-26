@@ -5,6 +5,7 @@ phantom_omni_/omni_angle/CMakeFiles/omni_angle.dir/omni_angle_automoc.cpp.o: pha
 
 phantom_omni_/omni_angle/CMakeFiles/omni_angle.dir/src/main.cpp.o: /home/kid/catkin_ws/devel/include/phantom_omni/OmniFeedback.h
 phantom_omni_/omni_angle/CMakeFiles/omni_angle.dir/src/main.cpp.o: /home/kid/catkin_ws/src/phantom_omni_/omni_angle/src/main.cpp
+phantom_omni_/omni_angle/CMakeFiles/omni_angle.dir/src/main.cpp.o: /opt/ros/kinetic/include/geometry_msgs/Quaternion.h
 phantom_omni_/omni_angle/CMakeFiles/omni_angle.dir/src/main.cpp.o: /opt/ros/kinetic/include/geometry_msgs/Vector3.h
 phantom_omni_/omni_angle/CMakeFiles/omni_angle.dir/src/main.cpp.o: /opt/ros/kinetic/include/ros/advertise_options.h
 phantom_omni_/omni_angle/CMakeFiles/omni_angle.dir/src/main.cpp.o: /opt/ros/kinetic/include/ros/advertise_service_options.h

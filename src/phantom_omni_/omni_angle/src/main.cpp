@@ -4,10 +4,11 @@
 #include <phantom_omni/OmniFeedback.h>
 #include <sensor_msgs/JointState.h>
 #include <geometry_msgs/Vector3.h>
+#include <geometry_msgs/Quaternion.h>
 #include <fstream>
 #include <iostream>
 
-#define RATE 100.0
+#define RATE 50.0
 
 #define THETA_D_0 0.0
 #define THETA_DD_0 0.0
@@ -53,11 +54,22 @@ double Kdx = 500.0;
 double Kdy = 2600;
 double Kdz = 300;
 
+double rotation = 2 * M_PI;
+double d_rotation = 0;
+double rotation_cur = 0;
+double rotation_prev = 0;
+
 //cur = Current, An=Angle, Pos = Position, Vel = Velocity, Acc = Acceleration, prev = Previous, Des = Destination
 //Vector3の各要素の変数の型はfloat型
 geometry_msgs::Vector3 curAn, curPos, initialPos, finalPos, initialAn, finalAn, curAnVel, curAnAcc, prevAn, prevAnVel;
 
 geometry_msgs::Vector3 curDesPos, prevDesPos, curDesAn, curDesAnVel, curDesAnAcc, prevDesAn, prevDesAnVel, prevDesAnAcc;
+
+//回転の中心を指定するベクトル
+geometry_msgs::Vector3 rotPos;
+
+//Quaternionを定義する
+geometry_msgs::Quaternion q , r ;
 
 //前の時間を保存するための変数
 ros::Time prevTime;
@@ -110,12 +122,11 @@ geometry_msgs::Vector3 inverse_kin(geometry_msgs::Vector3 pos)
 	geometry_msgs::Vector3 angles;
 	float c_3;
 	float s_3;
-	c_3 = (std::pow(pos.x,2.0) + std::pow(pos.y,2.0) + std::pow(pos.z,2.0) -std::pow(a2,2.0) - std::pow(a3,2.0))/(2 * a2 * a3);
-	s_3 = sqrt(1 - std::pow(c_3,2.0));
-
+	c_3 = (pow(pos.x,2.0) + pow(pos.y,2.0) + pow(pos.z,2.0) - pow(a2,2.0) - pow(a3,2.0))/(2 * a2 * a3);
+	s_3 = sqrt(1 - pow(c_3,2.0));
 	angles.x = atan2(pos.y , pos.x);
-	angles.z = -atan2(s_3,c_3);
-	angles.y = atan2( pos.z , sqrt(std::pow(pos.x,2.0) + std::pow(pos.y,2.0))) + atan2(a3 * s_3 , a2 + a3 * c_3);
+	angles.z = atan2(s_3,c_3);
+	angles.y = (atan2( pos.z , sqrt(std::pow(pos.x,2.0) + std::pow(pos.y,2.0))) + atan2(a3 * s_3 , a2 + a3 * c_3));
 	return angles;
 }
 
@@ -190,7 +201,7 @@ int main(int argc, char **argv)
 	
 	//ノードハンドラの宣言
 	ros::NodeHandle n;
-
+	double norm;
 	//"omni_force_feedbackをpublishする"
 	ros::Publisher pub = n.advertise<phantom_omni::OmniFeedback>("omni1_force_feedback", 1000); 
 
@@ -230,7 +241,7 @@ int main(int argc, char **argv)
 
 	//列挙型:複数の定数をまとめる ここでは状態のステータスを表す
 	enum State{STANDBY, JOINTMOVE, POSMOVE, CIRCLE, LINE, FINISH};
-	State curState = LINE;		//状態ステータスをスタンバイに
+	State curState = CIRCLE;		//状態ステータスをスタンバイに
 	while (ros::ok()&& !interrupted)		//ノード実行中でなおかつinterrupted = falseの時ループを実行する
 	{
 		signal(SIGINT, mySigintHandler);  //SIGINT:外部の割り込みを表す。この時interrupted = trueとする
@@ -341,6 +352,7 @@ int main(int argc, char **argv)
 			prevDesPos = curDesPos;
 			prevDesAnVel = curDesAnVel;
 			prevDesAnAcc = curDesAnAcc;
+
 			
 			//次に移動する座標を5次補間で計算　例外処理を加える必要あり：分母がゼロになる時
 			curDesPos.x = angleValue(initialPos.x,finalPos.x, 0 , (t_f-t_0).toSec(), (t-t_0).toSec());			
@@ -364,9 +376,91 @@ int main(int argc, char **argv)
 		   }
 		break;		//ループの終了
 
+		case CIRCLE:
+
+		if(!setup){				//setup=falseのとき
+			ROS_INFO("Starting Motion - Line Mode");		//ログの出力
+			//初期位置にアームをセットする
+			initialAn.x = 0;
+			initialAn.y = M_PI/4;
+			initialAn.z = -M_PI/3.9;
+
+			curPos = forward_kin(initialAn);
+			initialPos=curPos;
+
+			setup = true;		//セットアップ完了
+
+			t_f = t_0 + ros::Duration(3.0);
+			//目標角度のセット:開始地点と同じ
+			finalAn.x = M_PI/2;
+			finalAn.y = M_PI/2;
+			finalAn.z = -M_PI/2;
+
+			//回転の中心を表すベクトル:単位ベクトルに変換する
+			rotPos.x = 0.01;
+			rotPos.y = 0.01;
+			rotPos.z = 0.01;
+			norm = sqrt(pow(rotPos.x,2) + pow(rotPos.y,2) + pow(rotPos.z,2));
+			rotPos.x = rotPos.x / norm;
+			rotPos.y = rotPos.y / norm;
+			rotPos.z = rotPos.z / norm;
 
 
-		break;
+			finalPos = forward_kin(finalAn);
+
+			
+		}
+
+		if (t > t_0 && t < t_f ){		//現時刻が設定した時間内のとき
+
+			//時間をファイルへ出力
+			fout<< (t-t_0).toSec() << ",";			
+			//角度をファイルへ出力
+			fout<< curAn.x *180 / M_PI << ","<<curAn.y *180 / M_PI  << ","<<curAn.z *180 / M_PI <<"," ;
+			//fout<< curPos.x << ","<<curPos.y << ","<< curPos.z << "," << endl;
+
+
+			prevDesAn = curDesAn;		
+			prevDesPos = curDesPos;
+			prevDesAnVel = curDesAnVel;
+			prevDesAnAcc = curDesAnAcc;
+			
+			//移動回転量を計算
+			rotation_cur = angleValue( 0 , 2 * M_PI, 0 , (t_f-t_0).toSec(), (t-t_0).toSec());
+
+			//Quaternionを定義する
+			q.x = rotPos.x * sin(rotation_cur / 2);
+			q.y = rotPos.y * sin(rotation_cur / 2);
+			q.z = rotPos.z * sin(rotation_cur / 2);
+			q.w = cos(rotation_cur / 2);
+
+			
+			initialPos.x = 0.1;
+			initialPos.y = 0.05;
+			initialPos.z = 0.05;
+			//次に移動する座標をクォータニオンを用いて計算する
+			curDesPos.x = ( 1 - 2 * pow(q.y,2) - 2 * pow(q.z,2))* initialPos.x + 2 * (q.x * q.y + q.w * q.z)* initialPos.y + 2 * (-q.w * q.y + q.x + q.z) * initialPos.z ;		
+			curDesPos.y = 2 * (-q.w * q.z + q.x + q.y) * initialPos.x + (1 - 2 * pow(q.x,2) - 2 * pow(q.z,2) ) * initialPos.y + 2 * (q.w * q.x + q.y * q.z) * initialPos.z ;	
+			curDesPos.z = 2 * (q.x * q.z + q.w + q.y) * initialPos.x + 2 * (q.y * q.z - q.w + q.x) * initialPos.y + (1 - 2 * pow(q.x,2) - 2 * pow(q.y,2)) * initialPos.z ;	
+			cout << "q = " << q.x << "  "<< q.y <<"  "<< q.z <<"  " << q.w <<endl;
+			//cout << "r = " << r.x << r.y <<r.z << endl;
+			//cout<< initialPos.x << ","<<initialPos.y << ","<< initialPos.z << "," << endl;
+			fout<< curDesPos.x << ","<<curDesPos.y << ","<< curDesPos.z << "," << endl;
+			curDesAn = inverse_kin(curDesPos);
+
+			//fout<< curDesAn.y *180 / M_PI <<endl;
+			//fout<< curDesAn.z *180 / M_PI <<endl;
+			
+			msg = get_torque(t,prevTimeLoop);
+
+
+		   }
+		   else if(t > t_f){		//もし時間が過ぎていた時
+			curState = FINISH;		//状態ステータスをFINISHに変更
+			setup = false;		//setupをfalseに変更=次回実行時は初期位置に戻る
+			ROS_INFO("Target reached");		//ログの出力
+		   }
+		break;		//ループの終了
 
 	default:
 	
