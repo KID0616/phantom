@@ -7,7 +7,7 @@
 #include <fstream>
 #include <iostream>
 
-#define RATE 100.0
+#define RATE 50.0
 
 #define THETA_D_0 0.0
 #define THETA_DD_0 0.0
@@ -59,6 +59,7 @@ geometry_msgs::Vector3 curAn, curPos, initialPos, finalPos, initialAn, finalAn, 
 
 geometry_msgs::Vector3 curDesPos, prevDesPos, curDesAn, curDesAnVel, curDesAnAcc, prevDesAn, prevDesAnVel, prevDesAnAcc;
 
+geometry_msgs::Vector3 rotPos;
 //前の時間を保存するための変数
 ros::Time prevTime;
 
@@ -70,6 +71,7 @@ double a_3;
 double a_4;
 double a_5;
 
+double rotAn =0;
 //ここまでグローバル変数
 
 
@@ -140,6 +142,7 @@ void angle_callback(const sensor_msgs::JointState::ConstPtr msg)		//msg:取得�
 	curAn.x = msg->position[0];   // "->"ドットアロー演算子。ここではmsg.position[0]と同じ意味
 	curAn.y = msg->position[1];
 	curAn.z = msg->position[2]-(M_PI/2); //!!!
+	cout<< curAn.x *180 / M_PI << ","<<curAn.y *180 / M_PI  << ","<<curAn.z *180 / M_PI <<endl;
 
 	//時間をdouble型に変換する
 	double diff = t.toSec() - prevTime.toSec();   //現在の時間一つ前の時間 = diff
@@ -186,10 +189,15 @@ phantom_omni::OmniFeedback get_torque(ros::Time time_now, ros::Time time_last)
 //main関数
 int main(int argc, char **argv)
 {
-	ros::init( argc, argv, "omni_haptic_node");		//初期化　ノード名は"omni_hptic_node"
+	ros::init( argc, argv, "omni_haptic_node");		//初期化　ノード名は"omni_haptic_node"
 	
 	//ノードハンドラの宣言
 	ros::NodeHandle n;
+
+	double norm;
+	double c,s;
+	double dist_f;
+	double dist;
 
 	//"omni_force_feedbackをpublishする"
 	ros::Publisher pub = n.advertise<phantom_omni::OmniFeedback>("omni1_force_feedback", 1000); 
@@ -256,7 +264,7 @@ int main(int argc, char **argv)
 			initialAn.x = 0;
 			initialAn.y = 0;
 			initialAn.z = -M_PI/2;
-
+		
 			setup = true;		//セットアップ完了
 
 			t_f = t_0 + ros::Duration(3.0);
@@ -307,10 +315,74 @@ int main(int argc, char **argv)
 		if(!setup){				//setup=falseのとき
 			ROS_INFO("Starting Motion - Line Mode");		//ログの出力
 			//初期位置にアームをセットする
+			initialPos.x = 0.1;
+			initialPos.y = 0.0;
+			initialPos.z = 0.1;
+
+			curAn = inverse_kin(initialPos);
+			initialAn = curAn;
+			curDesAn = curAn;
+
+			setup = true;		//セットアップ完了
+
+			t_f = t_0 + ros::Duration(3.0);
+			//目標角度のセット
+			finalPos.x = 0.08;		
+			finalPos.y = 0.05;
+			finalPos.z = 0.0;
+
+			finalAn = inverse_kin(finalPos);
+			msg = get_torque(t,prevTimeLoop);		
+		
+		}
+
+		if (t > t_0 && t < t_f ){		//現時刻が設定した時間内のとき
+			//前回の移動目票位置・関節角度・角速度・角加速度=今回の移動目票位置・関節角度・角速度・角加速度
+
+			//時間をファイルへ出力
+			fout<< (t-t_0).toSec() << ",";			
+			//角度をファイルへ出力
+			fout<< curAn.x *180 / M_PI << ","<<curAn.y *180 / M_PI  << ","<<curAn.z *180 / M_PI <<"," ;
+			fout<< curPos.x << ","<<curPos.y << ","<< curPos.z << "," << endl;
+
+
+			prevDesAn = curDesAn;		
+			prevDesPos = curDesPos;
+			prevDesAnVel = curDesAnVel;
+			prevDesAnAcc = curDesAnAcc;
+			
+			//合計の移動距離を計算
+			dist_f = sqrt(pow(finalPos.x - initialPos.x, 2) + pow(finalPos.y - initialPos.y, 2) + pow(finalPos.z - initialPos.z, 2));
+			dist = angleValue( 0 ,dist_f , 0 , (t_f-t_0).toSec(), (t-t_0).toSec());
+			curDesPos.x = (finalPos.x - initialPos.x) * (dist / dist_f) + initialPos.x ;	
+			curDesPos.y = (finalPos.y - initialPos.y) * (dist / dist_f) + initialPos.y ;	
+			curDesPos.z = (finalPos.z - initialPos.z) * (dist / dist_f) + initialPos.z ;	
+
+			curDesAn = inverse_kin(curDesPos);
+			
+
+			//fout<< curDesAn.y *180 / M_PI <<endl;
+			//fout<< curDesAn.z *180 / M_PI <<endl;
+			
+			msg = get_torque(t,prevTimeLoop);
+
+
+		   }
+		   else if(t > t_f){		//もし時間が過ぎていた時
+			curState = FINISH;		//状態ステータスをFINISHに変更
+			setup = false;		//setupをfalseに変更=次回実行時は初期位置に戻る
+			ROS_INFO("Target reached");		//ログの出力
+		   }
+		break;		//ループの終了
+
+		case CIRCLE:
+
+		if(!setup){				//setup=falseのとき
+			ROS_INFO("Starting Motion - Circle Mode");		//ログの出力
+			//初期位置にアームをセットする
 			initialAn.x = 0;
 			initialAn.y = 0;
 			initialAn.z = -M_PI/2;
-
 			curPos = forward_kin(initialAn);
 			initialPos = curPos;
 
@@ -323,6 +395,15 @@ int main(int argc, char **argv)
 			finalAn.z = M_PI/6 - M_PI/2;
 
 			finalPos = forward_kin(finalAn);
+
+			rotPos.x = 1.0;
+			rotPos.y = 1.0;
+			rotPos.z = 1.0;
+			norm = sqrt(pow(rotPos.x,2) + pow(rotPos.y,2) + pow(rotPos.z,2));
+			rotPos.x = rotPos.x / norm;
+			rotPos.y = rotPos.y / norm;
+			rotPos.z = rotPos.z / norm;
+
 
 			
 		}
@@ -342,10 +423,14 @@ int main(int argc, char **argv)
 			prevDesAnVel = curDesAnVel;
 			prevDesAnAcc = curDesAnAcc;
 			
+			rotAn = angleValue(0.0,2 * M_PI, 0 , (t_f-t_0).toSec(), (t-t_0).toSec());	
+			c = cos(rotAn);
+			s = sin(rotAn);
+
 			//次に移動する座標を5次補間で計算　例外処理を加える必要あり：分母がゼロになる時
-			curDesPos.x = angleValue(initialPos.x,finalPos.x, 0 , (t_f-t_0).toSec(), (t-t_0).toSec());			
-			curDesPos.y = ((finalPos.y-initialPos.y)/(finalPos.x-initialPos.x)) * (curDesPos.x - initialPos.x ) + initialPos.y;
-			curDesPos.z = ((finalPos.z-initialPos.z)/(finalPos.x-initialPos.x)) * (curDesPos.x - initialPos.x ) + initialPos.z;
+			curDesPos.x = (c + pow(rotPos.x,2)*(1-c))*initialPos.x + (rotPos.x * rotPos.y *(1-c)-rotPos.z * s )* initialPos.y + (rotPos.x * rotPos.z *(1-c)+rotPos.y * s )* initialPos.z;
+			curDesPos.y = (rotPos.x * rotPos.y *(1-c)+rotPos.z * s )* initialPos.x + (c + pow(rotPos.y,2)*(1-c))*initialPos.y + (rotPos.y * rotPos.z *(1-c)-rotPos.x * s )* initialPos.z;
+			curDesPos.z = (rotPos.z * rotPos.x *(1-c)-rotPos.y * s )* initialPos.x + (rotPos.y * rotPos.z *(1-c)+rotPos.x * s )* initialPos.y + (c + pow(rotPos.z,2)*(1-c))*initialPos.z;  
 
 			curDesAn = inverse_kin(curDesPos);
 			
@@ -364,9 +449,6 @@ int main(int argc, char **argv)
 		   }
 		break;		//ループの終了
 
-
-
-		break;
 
 	default:
 	
