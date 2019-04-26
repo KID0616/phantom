@@ -238,7 +238,7 @@ int main(int argc, char **argv)
 
 	//列挙型:複数の定数をまとめる ここでは状態のステータスを表す
 	enum State{STANDBY, JOINTMOVE, POSMOVE, CIRCLE, LINE, FINISH};
-	State curState = LINE;		//状態ステータスをスタンバイに
+	State curState = CIRCLE;		//状態ステータスをスタンバイに
 	while (ros::ok()&& !interrupted)		//ノード実行中でなおかつinterrupted = falseの時ループを実行する
 	{
 		signal(SIGINT, mySigintHandler);  //SIGINT:外部の割り込みを表す。この時interrupted = trueとする
@@ -380,25 +380,28 @@ int main(int argc, char **argv)
 		if(!setup){				//setup=falseのとき
 			ROS_INFO("Starting Motion - Circle Mode");		//ログの出力
 			//初期位置にアームをセットする
-			initialAn.x = 0;
-			initialAn.y = 0;
-			initialAn.z = -M_PI/2;
-			curPos = forward_kin(initialAn);
-			initialPos = curPos;
+			initialPos.x = 0.12;
+			initialPos.y = 0.0;
+			initialPos.z = -0.1;
+
+			curAn = inverse_kin(initialPos);
+			initialAn = curAn;
+			curDesAn = curAn;
 
 			setup = true;		//セットアップ完了
 
 			t_f = t_0 + ros::Duration(3.0);
 			//目標角度のセット
-			finalAn.x = M_PI/6;		
-			finalAn.y = M_PI/6;
-			finalAn.z = M_PI/6 - M_PI/2;
+			finalPos.x = 0.08;		
+			finalPos.y = 0.01;
+			finalPos.z = 0.0;
 
-			finalPos = forward_kin(finalAn);
+			finalAn = inverse_kin(finalPos);
+			msg = get_torque(t,prevTimeLoop);	
 
-			rotPos.x = 1.0;
-			rotPos.y = 1.0;
-			rotPos.z = 1.0;
+			rotPos.x = 0.1;
+			rotPos.y = 0.1;
+			rotPos.z = 0.1;
 			norm = sqrt(pow(rotPos.x,2) + pow(rotPos.y,2) + pow(rotPos.z,2));
 			rotPos.x = rotPos.x / norm;
 			rotPos.y = rotPos.y / norm;
