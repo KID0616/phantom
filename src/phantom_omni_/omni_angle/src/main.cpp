@@ -193,6 +193,7 @@ int main(int argc, char **argv)
 	
 	//ノードハンドラの宣言
 	ros::NodeHandle n;
+	ros::NodeHandle pn("~");
 
 	double norm;
 	double c,s;
@@ -203,7 +204,14 @@ int main(int argc, char **argv)
 	//"omni_force_feedbackをpublishする"
 	ros::Publisher pub = n.advertise<phantom_omni::OmniFeedback>("omni1_force_feedback", 1000); 
 
-	ofstream fout("test1.csv");
+	pn.getParam("init_x",initialPos.x);
+	pn.getParam("init_y",initialPos.y);
+	pn.getParam("init_z",initialPos.z);
+	pn.getParam("final_x",finalPos.x);
+	pn.getParam("final_y",finalPos.y);
+	pn.getParam("final_z",finalPos.z);
+
+	ofstream fout("/home/kid/catkin_ws/test1.csv");
 	if(!fout){
 		cout << "ファイルをオープンできませんでした。"<< endl;
 		return 1;
@@ -239,7 +247,16 @@ int main(int argc, char **argv)
 
 	//列挙型:複数の定数をまとめる ここでは状態のステータスを表す
 	enum State{STANDBY, JOINTMOVE, POSMOVE, CIRCLE, LINE, FINISH};
-	State curState = CIRCLE;		//状態ステータスをスタンバイに
+	State curState; 
+	int init_state;
+	pn.getParam("init_state",init_state);
+	if(init_state == 0){
+		curState = LINE;
+	}
+	else if(init_state == 1){
+		curState = CIRCLE;
+	}
+	//State curState = CIRCLE;		//状態ステータスをスタンバイに
 	while (ros::ok()&& !interrupted)		//ノード実行中でなおかつinterrupted = falseの時ループを実行する
 	{
 		signal(SIGINT, mySigintHandler);  //SIGINT:外部の割り込みを表す。この時interrupted = trueとする
@@ -316,9 +333,6 @@ int main(int argc, char **argv)
 		if(!setup){				//setup=falseのとき
 			ROS_INFO("Starting Motion - Line Mode");		//ログの出力
 			//初期位置にアームをセットする
-			initialPos.x = 0.1;
-			initialPos.y = 0.0;
-			initialPos.z = 0.1;
 
 			curAn = inverse_kin(initialPos);
 			initialAn = curAn;
@@ -327,10 +341,10 @@ int main(int argc, char **argv)
 			setup = true;		//セットアップ完了
 
 			t_f = t_0 + ros::Duration(3.0);
-			//目標角度のセット
-			finalPos.x = 0.08;		
-			finalPos.y = 0.05;
-			finalPos.z = 0.0;
+			
+			//finalPos.x = 0.08;		
+			//finalPos.y = 0.05;
+			//finalPos.z = 0.0;
 
 			finalAn = inverse_kin(finalPos);
 			msg = get_torque(t,prevTimeLoop);		
@@ -380,10 +394,6 @@ int main(int argc, char **argv)
 
 		if(!setup){				//setup=falseのとき
 			ROS_INFO("Starting Motion - Circle Mode");		//ログの出力
-			//初期位置にアームをセットする
-			initialPos.x = 0.05;
-			initialPos.y = 0.05;
-			initialPos.z = -0.05;
 
 			curAn = inverse_kin(initialPos);
 			initialAn = curAn;
@@ -392,28 +402,22 @@ int main(int argc, char **argv)
 			setup = true;		//セットアップ完了
 
 			t_f = t_0 + ros::Duration(3.0);
-			
-			//目標位置のセット(特に意味はない)
-			/*finalPos.x = 0.05;		
-			finalPos.y = 0.05;
-			finalPos.z = 0.0; */
-
-			finalAn = inverse_kin(finalPos);
+		
 			msg = get_torque(t,prevTimeLoop);	
 
 			//回転軸となるベクトルの定義
-			rotPos.x = 0.5;
-			rotPos.y = 0.5;
-			rotPos.z = 1;
+			pn.getParam("rotPos_x",rotPos.x);
+			pn.getParam("rotPos_y",rotPos.y);
+			pn.getParam("rotPos_z",rotPos.z);						
 			norm = sqrt(pow(rotPos.x,2) + pow(rotPos.y,2) + pow(rotPos.z,2));
 			rotPos.x = rotPos.x / norm;
 			rotPos.y = rotPos.y / norm;
 			rotPos.z = rotPos.z / norm;
 
 			//回転中心の座標を定義
-			rotCen.x = 0.1;
-			rotCen.y = 0.1;
-			rotCen.z = 0.00;
+			pn.getParam("rotCen_x",rotCen.x);
+			pn.getParam("rotCen_y",rotCen.y);
+			pn.getParam("rotCen_z",rotCen.z);			
 
 
 			

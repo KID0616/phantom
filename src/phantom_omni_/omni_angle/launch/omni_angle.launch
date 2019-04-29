@@ -1,0 +1,32 @@
+<launch>
+        <arg name="init_x" default="0.05"/>
+        <arg name="init_y" default="0.05"/>
+        <arg name="init_z" default="-0.05"/>
+        <arg name="final_x" default="0.08"/>
+        <arg name="final_y" default="0.09"/>
+        <arg name="final_z" default="0.0"/>
+        <arg name="rotCen_x" default="0.1"/>
+        <arg name="rotCen_y" default="0.1"/>
+        <arg name="rotCen_z" default="0.0"/>
+        <arg name="rotPos_x" default="0.5"/>
+        <arg name="rotPos_y" default="0.5"/>
+        <arg name="rotPos_z" default="1.0"/>
+        <arg name="init_state" default="0"/>
+        
+    <node pkg="omni_angle" name="omni_angle" type="omni_angle">
+        <param name="init_x" value="$(arg init_x)"/> 
+        <param name="init_y" value="$(arg init_y)"/> 
+        <param name="init_z" value="$(arg init_z)"/> 
+        <param name="final_x" value="$(arg final_x)"/> 
+        <param name="final_y" value="$(arg final_y)"/> 
+        <param name="final_z" value="$(arg final_z)"/> 
+        <param name="rotCen_x" value="$(arg rotCen_x)"/> 
+        <param name="rotCen_y" value="$(arg rotCen_y)"/> 
+        <param name="rotCen_z" value="$(arg rotCen_z)"/> 
+        <param name="rotPos_x" value="$(arg rotPos_x)"/> 
+        <param name="rotPos_y" value="$(arg rotPos_y)"/> 
+        <param name="rotPos_z" value="$(arg rotPos_z)"/> 
+        <param name="init_state" value="$(arg init_state)"/> 
+        
+    </node>
+</launch>
