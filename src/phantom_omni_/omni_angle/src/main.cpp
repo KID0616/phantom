@@ -198,6 +198,7 @@ int main(int argc, char **argv)
 	double c,s;
 	double dist_f;
 	double dist;
+	geometry_msgs::Vector3 rotCen , initialPos_i;
 
 	//"omni_force_feedbackをpublishする"
 	ros::Publisher pub = n.advertise<phantom_omni::OmniFeedback>("omni1_force_feedback", 1000); 
@@ -380,9 +381,9 @@ int main(int argc, char **argv)
 		if(!setup){				//setup=falseのとき
 			ROS_INFO("Starting Motion - Circle Mode");		//ログの出力
 			//初期位置にアームをセットする
-			initialPos.x = 0.12;
-			initialPos.y = 0.0;
-			initialPos.z = -0.1;
+			initialPos.x = 0.05;
+			initialPos.y = 0.05;
+			initialPos.z = -0.05;
 
 			curAn = inverse_kin(initialPos);
 			initialAn = curAn;
@@ -391,21 +392,28 @@ int main(int argc, char **argv)
 			setup = true;		//セットアップ完了
 
 			t_f = t_0 + ros::Duration(3.0);
-			//目標角度のセット
-			finalPos.x = 0.08;		
-			finalPos.y = 0.01;
-			finalPos.z = 0.0;
+			
+			//目標位置のセット(特に意味はない)
+			/*finalPos.x = 0.05;		
+			finalPos.y = 0.05;
+			finalPos.z = 0.0; */
 
 			finalAn = inverse_kin(finalPos);
 			msg = get_torque(t,prevTimeLoop);	
 
-			rotPos.x = 0.1;
-			rotPos.y = 0.1;
-			rotPos.z = 0.1;
+			//回転軸となるベクトルの定義
+			rotPos.x = 0.5;
+			rotPos.y = 0.5;
+			rotPos.z = 1;
 			norm = sqrt(pow(rotPos.x,2) + pow(rotPos.y,2) + pow(rotPos.z,2));
 			rotPos.x = rotPos.x / norm;
 			rotPos.y = rotPos.y / norm;
 			rotPos.z = rotPos.z / norm;
+
+			//回転中心の座標を定義
+			rotCen.x = 0.1;
+			rotCen.y = 0.1;
+			rotCen.z = 0.00;
 
 
 			
@@ -430,10 +438,17 @@ int main(int argc, char **argv)
 			c = cos(rotAn);
 			s = sin(rotAn);
 
+			//中間座標系に座標変換
+			initialPos_i.x = initialPos.x - rotCen.x;
+			initialPos_i.y = initialPos.y - rotCen.y;
+			initialPos_i.z = initialPos.z - rotCen.z;
+
+
+
 			//次に移動する座標を5次補間で計算　例外処理を加える必要あり：分母がゼロになる時
-			curDesPos.x = (c + pow(rotPos.x,2)*(1-c))*initialPos.x + (rotPos.x * rotPos.y *(1-c)-rotPos.z * s )* initialPos.y + (rotPos.x * rotPos.z *(1-c)+rotPos.y * s )* initialPos.z;
-			curDesPos.y = (rotPos.x * rotPos.y *(1-c)+rotPos.z * s )* initialPos.x + (c + pow(rotPos.y,2)*(1-c))*initialPos.y + (rotPos.y * rotPos.z *(1-c)-rotPos.x * s )* initialPos.z;
-			curDesPos.z = (rotPos.z * rotPos.x *(1-c)-rotPos.y * s )* initialPos.x + (rotPos.y * rotPos.z *(1-c)+rotPos.x * s )* initialPos.y + (c + pow(rotPos.z,2)*(1-c))*initialPos.z;  
+			curDesPos.x = (c + pow(rotPos.x,2)*(1-c))*initialPos_i.x + (rotPos.x * rotPos.y *(1-c)-rotPos.z * s )* initialPos_i.y + (rotPos.x * rotPos.z *(1-c)+rotPos.y * s )* initialPos_i.z + rotCen.x;
+			curDesPos.y = (rotPos.x * rotPos.y *(1-c)+rotPos.z * s )* initialPos_i.x + (c + pow(rotPos.y,2)*(1-c))*initialPos_i.y + (rotPos.y * rotPos.z *(1-c)-rotPos.x * s )* initialPos_i.z + rotCen.y;
+			curDesPos.z = (rotPos.z * rotPos.x *(1-c)-rotPos.y * s )* initialPos_i.x + (rotPos.y * rotPos.z *(1-c)+rotPos.x * s )* initialPos_i.y + (c + pow(rotPos.z,2)*(1-c))*initialPos_i.z + rotCen.z;  
 
 			curDesAn = inverse_kin(curDesPos);
 			
