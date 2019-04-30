@@ -43,6 +43,7 @@ double Ix = 0.035 + 0.1;
 double Iy = 0.035;
 double Iz = 0.1;
 
+
 //Proportional Gain　比例ゲイン
 double Kpx = 15000;
 double Kpy = 36000;
